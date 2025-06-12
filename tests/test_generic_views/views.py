@@ -60,13 +60,23 @@ class CustomContextView(generic.detail.AsyncSingleObjectMixin, generic.AsyncView
     async def get_object(self):
         return Book(name="dummy")
 
-    def get_context_data(self, **kwargs):
+    async def get_context_data(self, **kwargs):
         context = {"custom_key": "custom_value"}
         context.update(kwargs)
-        return super().get_context_data(**context)
+        return await super().get_context_data(**context)
 
     def get_context_object_name(self, obj):
         return "test_name"
+
+
+class TemplateResponseWithoutTemplate(
+    generic.detail.AsyncSingleObjectTemplateResponseMixin, generic.AsyncView
+):
+    # we don't define the usual template_name here
+
+    def __init__(self):
+        # Dummy object, but attr is required by get_template_name()
+        self.object = None
 
 
 class CustomSingleObjectView(generic.detail.AsyncSingleObjectMixin, generic.AsyncView):

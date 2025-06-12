@@ -1,3 +1,4 @@
+import logging
 import pathlib
 import re
 import time
@@ -6,6 +7,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponse
 from django.test import RequestFactory, Client
 from django.urls import resolve
+from django.utils.version import get_complete_version
 
 import pytest
 
@@ -14,6 +16,8 @@ from django_async_extensions.views.generic import (
     AsyncTemplateView,
     AsyncRedirectView,
 )
+
+from . import views
 
 try:
     import jinja2
@@ -157,8 +161,7 @@ class TestAsyncView:
         be named like an HTTP method.
         """
         msg = (
-            "The method name %s is not accepted as a keyword argument to "
-            "SimpleView()."
+            "The method name %s is not accepted as a keyword argument to SimpleView()."
         )
         # Check each of the allowed method names
         for method in SimpleView.http_method_names:
@@ -303,6 +306,28 @@ class TestAsyncView:
         view = PostOnlyView()
         response = await view.dispatch(self.rf.head("/"))
         assert response.status_code == 405
+
+    # TODO: django 6
+    @pytest.mark.skipif(
+        get_complete_version()[0] < 6, reason="escaping happens since django 6"
+    )
+    async def test_method_not_allowed_response_logged(self, caplog, subtests):
+        for path, escaped, index in [
+            ("/foo/", "/foo/", 0),
+            (r"/%1B[1;31mNOW IN RED!!!1B[0m/", r"/%1B[1;31mNOW IN RED!!!1B[0m/", 1),
+        ]:
+            with subtests.test(path=path):
+                request = self.rf.get(path, REQUEST_METHOD="BOGUS")
+                with caplog.at_level(logging.WARNING, "django.request"):
+                    response = await SimpleView.as_view()(request)
+
+                assert (
+                    caplog.records[index].getMessage()
+                    == f"Method Not Allowed (BOGUS): {escaped}"
+                )
+                assert caplog.records[index].levelname == "WARNING"
+
+                assert response.status_code == 405
 
 
 @pytest.fixture(autouse=True)
@@ -583,3 +608,68 @@ class TestAsyncRedirectView:
         view = AsyncRedirectView()
         response = await view.dispatch(self.rf.head("/foo/"))
         assert response.status_code == 410
+
+
+class TestGetContextData:
+    async def test_get_context_data_super(self):
+        test_view = views.CustomContextView()
+        context = await test_view.get_context_data(kwarg_test="kwarg_value")
+
+        # the test_name key is inserted by the test classes parent
+        assert "test_name" in context
+        assert context["kwarg_test"] == "kwarg_value"
+        assert context["custom_key"] == "custom_value"
+
+        # test that kwarg overrides values assigned higher up
+        context = await test_view.get_context_data(test_name="test_value")
+        assert context["test_name"] == "test_value"
+
+    async def test_object_at_custom_name_in_context_data(self):
+        # Checks 'pony' key presence in dict returned by get_context_date
+        test_view = views.CustomSingleObjectView()
+        test_view.context_object_name = "pony"
+        context = await test_view.get_context_data()
+        assert context["pony"] == test_view.object
+
+    async def test_object_in_get_context_data(self):
+        # Checks 'object' key presence in dict returned by get_context_date #20234
+        test_view = views.CustomSingleObjectView()
+        context = await test_view.get_context_data()
+        assert context["object"] == test_view.object
+
+
+class TestUseMultipleObjectMixin:
+    rf = RequestFactory()
+
+    async def test_use_queryset_from_view(self):
+        test_view = views.CustomMultipleObjectMixinView()
+        await test_view.get(self.rf.get("/"))
+        # Don't pass queryset as argument
+        context = await test_view.get_context_data()
+        assert context["object_list"] == test_view.queryset
+
+    async def test_overwrite_queryset(self):
+        test_view = views.CustomMultipleObjectMixinView()
+        await test_view.get(self.rf.get("/"))
+        queryset = [{"name": "Lennon"}, {"name": "Ono"}]
+        assert test_view.queryset != queryset
+        # Overwrite the view's queryset with queryset from kwarg
+        context = await test_view.get_context_data(object_list=queryset)
+        assert context["object_list"] == queryset
+
+
+class TestSingleObjectTemplateResponseMixin:
+    def test_template_mixin_without_template(self):
+        """
+        We want to makes sure that if you use a template mixin, but forget the
+        template, it still tells you it's ImproperlyConfigured instead of
+        TemplateDoesNotExist.
+        """
+        view = views.TemplateResponseWithoutTemplate()
+        msg = re.escape(
+            "SingleObjectTemplateResponseMixin requires a definition "
+            "of 'template_name', 'template_name_field', or 'model'; "
+            "or an implementation of 'get_template_names()'."
+        )
+        with pytest.raises(ImproperlyConfigured, match=msg):
+            view.get_template_names()

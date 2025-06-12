@@ -1,6 +1,6 @@
 [project]
 name = "django-async-extensions"
-version = "0.0.5"
+version = "0.0.6"
 description = "provide async capable stuff for django"
 authors = [
     {name = "amirreza",email = "amir.rsf1380@gmail.com"}
@@ -23,14 +23,13 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
     "Framework :: Django :: 5.2",
     "Framework :: AsyncIO"
 ]
 dependencies = [
-    "django >= 4.2",
+    "django (==5.2)"
 ]
 
 

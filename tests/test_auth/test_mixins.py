@@ -66,7 +66,8 @@ class TestAccessMixin:
 
     async def test_stacked_mixins_success(self):
         user = await models.User.objects.acreate(
-            username="joe", password="qwerty"  # noqa: S106
+            username="joe",
+            password="qwerty",  # noqa: S106
         )
         perms = models.Permission.objects.filter(
             codename__in=("add_customuser", "change_customuser")
@@ -85,7 +86,8 @@ class TestAccessMixin:
 
     async def test_stacked_mixins_missing_permission(self):
         user = await models.User.objects.acreate(
-            username="joe", password="qwerty"  # noqa: S106
+            username="joe",
+            password="qwerty",  # noqa: S106
         )
         perms = models.Permission.objects.filter(codename__in=("add_customuser",))
         await user.user_permissions.aadd(*[perm async for perm in perms])
@@ -102,7 +104,8 @@ class TestAccessMixin:
 
     async def test_access_mixin_permission_denied_response(self):
         user = await models.User.objects.acreate(
-            username="joe", password="qwerty"  # noqa: S106
+            username="joe",
+            password="qwerty",  # noqa: S106
         )
         # Authenticated users receive PermissionDenied.
         request = self.factory.get("/rand")
@@ -133,7 +136,8 @@ class TestAccessMixin:
     async def test_stacked_mixins_not_logged_in(self, mocker):
         mocker.patch.object(models.User, "is_authenticated", False)
         user = await models.User.objects.acreate(
-            username="joe", password="qwerty"  # noqa: S106
+            username="joe",
+            password="qwerty",  # noqa: S106
         )
         perms = models.Permission.objects.filter(
             codename__in=("add_customuser", "change_customuser")
@@ -236,7 +240,8 @@ class TestLoginRequiredMixin:
     @pytest.fixture(autouse=True)
     async def setup(self):
         self.user = await models.User.objects.acreate(
-            username="joe", password="qwerty"  # noqa: S106
+            username="joe",
+            password="qwerty",  # noqa: S106
         )
 
     async def test_login_required(self):
@@ -269,7 +274,8 @@ class TestPermissionsRequiredMixin:
     @pytest.fixture(autouse=True)
     async def setup(self):
         self.user = await models.User.objects.acreate(
-            username="joe", password="qwerty"  # noqa: S106
+            username="joe",
+            password="qwerty",  # noqa: S106
         )
         perms = models.Permission.objects.filter(
             codename__in=("add_customuser", "change_customuser")

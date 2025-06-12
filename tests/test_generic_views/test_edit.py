@@ -8,6 +8,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import Client, AsyncClient
 from django.test.client import RequestFactory
 from django.urls import reverse
+from django.utils.version import get_complete_version
 
 from django_async_extensions.views.generic import AsyncView
 from django_async_extensions.views.generic.edit import (
@@ -22,6 +23,8 @@ from .forms import AuthorForm
 
 client = Client()
 aclient = AsyncClient()
+
+version = get_complete_version()
 
 
 class TestFormMixin:
@@ -206,6 +209,10 @@ class TestCreateView:
                 {"name": "Randall Munroe", "slug": "randall-munroe"},
             )
 
+    @pytest.mark.skipif(
+        version[1] < 1 and not version[0] > 6,
+        reason="this test uses method_decorator which only supports async since 5.1",
+    )
     def test_create_restricted(self):
         res = client.post(
             "/edit/authors/create/restricted/",

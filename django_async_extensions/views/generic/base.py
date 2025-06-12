@@ -7,6 +7,7 @@ from django.http import HttpResponse, HttpResponseNotAllowed
 
 from django.utils.decorators import classonlymethod
 from django.utils.functional import classproperty
+from django.utils.log import log_response
 from django.views.generic.base import (
     View,
     TemplateResponseMixin,
@@ -105,13 +106,14 @@ class AsyncView(View):
         return await handler(request, *args, **kwargs)
 
     async def http_method_not_allowed(self, request, *args, **kwargs):
-        logger.warning(
+        response = HttpResponseNotAllowed(self._allowed_methods())
+        log_response(
             "Method Not Allowed (%s): %s",
             request.method,
             request.path,
-            extra={"status_code": 405, "request": request},
+            response=response,
+            request=request,
         )
-        response = HttpResponseNotAllowed(self._allowed_methods())
 
         return response
 

@@ -19,3 +19,5 @@ AUTH_TEMPLATES = [
         },
     }
 ]
+
+DEBUG = True

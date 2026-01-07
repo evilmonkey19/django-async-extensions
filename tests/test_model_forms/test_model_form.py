@@ -2093,15 +2093,15 @@ class TestModelMultipleChoiceField:
 
     def test_model_multiple_choice_null_characters(self):
         f = forms.ModelMultipleChoiceField(queryset=ExplicitPK.objects.all())
-        if version[0] >= 5 and version[1] >= 1:
+        if version >= (5, 1):
             msg = "Null characters are not allowed."
         else:
-            msg = "['Select a valid choice. \\x00something "
+            msg = "['Select a valid choice. \x00something "
             "is not one of the available choices.']"
-        with pytest.raises(ValidationError, match=msg):
+        with pytest.raises(ValidationError, match=re.escape(msg)):
             f.clean(["\x00something"])
 
-        with pytest.raises(ValidationError, match=msg):
+        with pytest.raises(ValidationError, match=re.escape(msg)):
             f.clean(["valid", "\x00something"])
 
     def test_model_multiple_choice_run_validators(self):
@@ -3048,18 +3048,22 @@ class TestOtherModelForm:
         assert bound_form.has_changed() is False
 
 
-class ModelFormCustomErrorTests(SimpleTestCase):
+class TestModelFormCustomError(SimpleTestCase):
     def test_custom_error_messages(self):
         data = {"name1": "@#$!!**@#$", "name2": "@#$!!**@#$"}
         errors = CustomErrorMessageForm(data).errors
-        if version[0] >= 5 and version[1] < 2:
+        if version >= (5, 1):
             self.assertHTMLEqual(
                 str(errors["name1"]),
-                '<ul class="errorlist"><li>Form custom error message.</li></ul>',
+                '<ul class="errorlist" id="id_name1_error">\
+                    <li>Form custom error message.</li>\
+                    </ul>',
             )
             self.assertHTMLEqual(
                 str(errors["name2"]),
-                '<ul class="errorlist"><li>Model custom error message.</li></ul>',
+                '<ul class="errorlist" id="id_name2_error">\
+                    <li>Model custom error message.</li>\
+                    </ul>',
             )
         else:
             self.assertHTMLEqual(
@@ -3077,18 +3081,20 @@ class ModelFormCustomErrorTests(SimpleTestCase):
         data = {"name1": "FORBIDDEN_VALUE", "name2": "ABC"}
         form = CustomErrorMessageForm(data)
         self.assertFalse(form.is_valid())
-        if version[0] >= 5 and version[1] < 2:
+        if version >= (5, 1):
             self.assertHTMLEqual(
                 str(form.errors["name1"]),
-                '<ul class="errorlist"><li>Model.clean() error messages.</li></ul>',
+                '<ul class="errorlist" id="id_name1_error">\
+                    <li>Model.clean() error messages.</li>\
+                    </ul>',
             )
             data = {"name1": "FORBIDDEN_VALUE2", "name2": "ABC"}
             form = CustomErrorMessageForm(data)
             self.assertFalse(form.is_valid())
             self.assertHTMLEqual(
                 str(form.errors["name1"]),
-                '<ul class="errorlist">'
-                "<li>Model.clean() error messages (simpler syntax).</li></ul>",
+                '<ul class="errorlist" id="id_name1_error">\
+                    <li>Model.clean() error messages (simpler syntax).</li></ul>',
             )
 
         else:

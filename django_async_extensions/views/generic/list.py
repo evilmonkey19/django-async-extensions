@@ -4,7 +4,13 @@ from django.db.models import QuerySet
 from django.http import Http404
 from django.utils.translation import gettext as _
 
-from django_async_extensions.core.paginator import AsyncPaginator
+import django
+
+if django.VERSION < (6, 0):
+    from django_async_extensions.core.paginator import AsyncPaginator
+else:
+    from django.core.paginator import AsyncPaginator  # type: ignore[import]
+
 from django_async_extensions.views.generic.base import (
     AsyncView,
     AsyncContextMixin,

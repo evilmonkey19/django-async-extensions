@@ -312,10 +312,14 @@ class TestAsyncView:
         get_complete_version()[0] < 6, reason="escaping happens since django 6"
     )
     async def test_method_not_allowed_response_logged(self, caplog, subtests):
-        for path, escaped, index in [
+        testing_data = [
             ("/foo/", "/foo/", 0),
-            (r"/%1B[1;31mNOW IN RED!!!1B[0m/", r"/%1B[1;31mNOW IN RED!!!1B[0m/", 1),
-        ]:
+            (r"/%1B[1;31mNOW IN RED!!!1B[0m/", r"/%1B[1;31mNOW IN RED!!!1B[0m/", 1) \
+                if get_complete_version() <= (6, 0) else
+            (r'/\x1b[1;31mNOW IN RED!!!1b[0m/', r'/\\x1b[1;31mNOW IN RED!!!1b[0m/', 1),
+        ]
+
+        for path, escaped, index in testing_data:
             with subtests.test(path=path):
                 request = self.rf.get(path, REQUEST_METHOD="BOGUS")
                 with caplog.at_level(logging.WARNING, "django.request"):

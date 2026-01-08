@@ -164,7 +164,7 @@ class AsyncProcessFormView(AsyncView):
         POST variables and then check if it's valid.
         """
         form = await self.get_form()
-        if form.is_valid():
+        if await sync_to_async(form.is_valid)():
             return await self.form_valid(form)
         else:
             return await self.form_invalid(form)
